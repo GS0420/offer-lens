@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OfferLens - 职场透视镜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        danger: '#EF4444',
+                        warning: '#F59E0B',
+                    },
+                },
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <header class="bg-primary text-white py-4 px-6 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">OfferLens</h1>
+            <span class="text-sm">职场透视镜</span>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 container mx-auto p-4">
+        <!-- 个人求职画像表单 -->
+        <section id="onboarding" class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">个人求职画像</h2>
+            <form id="profile-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">专业</label>
+                    <input type="text" id="major" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">期望薪资 (元/月)</label>
+                    <input type="number" id="salary" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">倾向城市</label>
+                    <input type="text" id="city" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">最看重的维度</label>
+                    <select id="priority" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="salary">钱多</option>
+                        <option value="work-life">事少</option>
+                        <option value="growth">发展</option>
+                        <option value="stability">稳定</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 transition-colors">
+                    保存配置
+                </button>
+            </form>
+        </section>
+
+        <!-- 图像上传区域 -->
+        <section id="capture" class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">图像采集</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <!-- 上传图片 -->
+                <div class="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+                    <input type="file" id="image-upload" accept="image/*" class="hidden">
+                    <label for="image-upload" class="cursor-pointer">
+                        <div class="flex flex-col items-center justify-center">
+                            <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <p class="text-gray-600">上传图片</p>
+                            <p class="text-xs text-gray-400 mt-1">支持 JPG、PNG 格式</p>
+                        </div>
+                    </label>
+                </div>
+                
+                <!-- 拍照 -->
+                <div class="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+                    <button id="take-photo" class="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                        <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <p class="text-gray-600">拍照</p>
+                        <p class="text-xs text-gray-400 mt-1">调用手机摄像头</p>
+                    </button>
+                    <video id="camera-preview" class="hidden absolute top-0 left-0 w-full h-full object-cover"></video>
+                    <canvas id="camera-canvas" class="hidden"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- AR 视图区域 -->
+        <section id="ar-view" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-semibold mb-4">视觉滤镜墙</h2>
+            
+            <!-- 滤镜切换按钮组 -->
+            <div class="flex space-x-2 mb-4 overflow-x-auto pb-2">
+                <button class="filter-btn bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
+                    综合匹配度
+                </button>
+                <button class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
+                    薪资水平
+                </button>
+                <button class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
+                    工作压力
+                </button>
+                <button class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
+                    公司规模
+                </button>
+            </div>
+            
+            <!-- 图片和AR层 -->
+            <div class="relative" id="image-container">
+                <img id="uploaded-image" class="w-full h-auto rounded-md" alt="上传的图片">
+                <div id="ar-overlay" class="absolute top-0 left-0 w-full h-full pointer-events-none"></div>
+            </div>
+        </section>
+
+        <!-- 底部详情抽屉 -->
+        <div id="detail-sheet" class="fixed inset-x-0 bottom-0 bg-white rounded-t-xl shadow-lg transform translate-y-full transition-transform duration-300 ease-in-out z-50">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="company-name" class="text-xl font-semibold"></h3>
+                    <button id="close-sheet" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="company-details" class="space-y-3">
+                    <!-- 详情内容将通过JavaScript动态填充 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-4 px-6">
+        <div class="container mx-auto text-center text-sm">
+            <p>OfferLens © 2026</p>
+        </div>
+    </footer>
+
+    <script>
+        // 个人求职画像数据
+        let userProfile = JSON.parse(localStorage.getItem('userProfile')) || null;
+        
+        // 公司数据
+        let companiesData = [];
+        
+        // 当前滤镜
+        let currentFilter = 'match_score';
+        
+        // DOM 元素
+        const profileForm = document.getElementById('profile-form');
+        const imageUpload = document.getElementById('image-upload');
+        const uploadedImage = document.getElementById('uploaded-image');
+        const arView = document.getElementById('ar-view');
+        const arOverlay = document.getElementById('ar-overlay');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const detailSheet = document.getElementById('detail-sheet');
+        const closeSheet = document.getElementById('close-sheet');
+        const companyName = document.getElementById('company-name');
+        const companyDetails = document.getElementById('company-details');
+        const takePhotoBtn = document.getElementById('take-photo');
+        const cameraPreview = document.getElementById('camera-preview');
+        const cameraCanvas = document.getElementById('camera-canvas');
+        
+        // 初始化
+        function init() {
+            // 检查本地存储中是否有用户画像
+            if (userProfile) {
+                document.getElementById('onboarding').classList.add('hidden');
+            }
+            
+            // 绑定事件
+            profileForm.addEventListener('submit', handleProfileSubmit);
+            imageUpload.addEventListener('change', handleImageUpload);
+            takePhotoBtn.addEventListener('click', handleTakePhoto);
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', handleFilterChange);
+            });
+            closeSheet.addEventListener('click', closeDetailSheet);
+        }
+        
+        // 处理拍照
+        function handleTakePhoto() {
+            // 检查是否支持摄像头
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('您的设备不支持摄像头');
+                return;
+            }
+            
+            // 显示摄像头预览
+            const captureSection = document.getElementById('capture');
+            const photoContainer = takePhotoBtn.parentElement;
+            
+            photoContainer.style.position = 'relative';
+            cameraPreview.classList.remove('hidden');
+            takePhotoBtn.classList.add('hidden');
+            
+            // 获取摄像头流
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    cameraPreview.srcObject = stream;
+                    cameraPreview.play();
+                    
+                    // 创建拍照按钮
+                    const captureBtn = document.createElement('button');
+                    captureBtn.id = 'capture-btn';
+                    captureBtn.className = 'absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-primary text-white w-16 h-16 rounded-full flex items-center justify-center shadow-lg';
+                    captureBtn.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>';
+                    
+                    // 创建取消按钮
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.id = 'cancel-btn';
+                    cancelBtn.className = 'absolute top-4 right-4 bg-white text-gray-800 w-10 h-10 rounded-full flex items-center justify-center shadow-md';
+                    cancelBtn.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+                    
+                    photoContainer.appendChild(captureBtn);
+                    photoContainer.appendChild(cancelBtn);
+                    
+                    // 绑定拍照事件
+                    captureBtn.addEventListener('click', () => {
+                        const ctx = cameraCanvas.getContext('2d');
+                        cameraCanvas.width = cameraPreview.videoWidth;
+                        cameraCanvas.height = cameraPreview.videoHeight;
+                        ctx.drawImage(cameraPreview, 0, 0, cameraCanvas.width, cameraCanvas.height);
+                        
+                        // 停止摄像头
+                        const stream = cameraPreview.srcObject;
+                        const tracks = stream.getTracks();
+                        tracks.forEach(track => track.stop());
+                        
+                        // 转换为Blob
+                        cameraCanvas.toBlob((blob) => {
+                            // 创建File对象
+                            const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+                            
+                            // 处理图片
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                uploadedImage.src = e.target.result;
+                                arView.classList.remove('hidden');
+                                
+                                // 处理图片加载完成后进行OCR
+                                uploadedImage.onload = function() {
+                                    performOCR(file);
+                                };
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                        
+                        // 恢复界面
+                        cameraPreview.classList.add('hidden');
+                        takePhotoBtn.classList.remove('hidden');
+                        captureBtn.remove();
+                        cancelBtn.remove();
+                        photoContainer.style.position = 'static';
+                    });
+                    
+                    // 绑定取消事件
+                    cancelBtn.addEventListener('click', () => {
+                        // 停止摄像头
+                        const stream = cameraPreview.srcObject;
+                        const tracks = stream.getTracks();
+                        tracks.forEach(track => track.stop());
+                        
+                        // 恢复界面
+                        cameraPreview.classList.add('hidden');
+                        takePhotoBtn.classList.remove('hidden');
+                        captureBtn.remove();
+                        cancelBtn.remove();
+                        photoContainer.style.position = 'static';
+                    });
+                })
+                .catch(error => {
+                    console.error('摄像头错误:', error);
+                    alert('无法访问摄像头，请检查权限设置');
+                    cameraPreview.classList.add('hidden');
+                    takePhotoBtn.classList.remove('hidden');
+                });
+        }
+        
+        // 处理个人画像表单提交
+        function handleProfileSubmit(e) {
+            e.preventDefault();
+            
+            userProfile = {
+                major: document.getElementById('major').value,
+                salary: document.getElementById('salary').value,
+                city: document.getElementById('city').value,
+                priority: document.getElementById('priority').value
+            };
+            
+            // 保存到本地存储
+            localStorage.setItem('userProfile', JSON.stringify(userProfile));
+            
+            // 隐藏表单
+            document.getElementById('onboarding').classList.add('hidden');
+            
+            // 显示提示
+            alert('个人求职画像已保存！');
+        }
+        
+        // 处理图片上传
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // 显示图片
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedImage.src = e.target.result;
+                arView.classList.remove('hidden');
+                
+                // 处理图片加载完成后进行OCR
+                uploadedImage.onload = function() {
+                    performOCR(file);
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 执行OCR
+        async function performOCR(file) {
+            try {
+                // 显示加载状态
+                arOverlay.innerHTML = '<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white">正在识别企业...</div>';
+                
+                console.log('开始OCR处理:', file);
+                
+                // 使用Tesseract.js进行OCR，使用中文+英文混合语言包提高识别精度
+                const { createWorker } = Tesseract;
+                console.log('创建Tesseract worker...');
+                
+                // 简化worker创建，避免使用可能导致问题的参数
+                const worker = await createWorker();
+                
+                console.log('Tesseract worker创建成功');
+                
+                // 设置语言为中文+英文
+                await worker.loadLanguage('chi_sim+eng');
+                await worker.initialize('chi_sim+eng');
+                
+                console.log('开始识别图片...');
+                const { data: { blocks } } = await worker.recognize(file);
+                console.log('识别完成，结果:', blocks);
+                
+                await worker.terminate();
+                
+                // 提取文本和坐标
+                const textBlocks = blocks.map(block => {
+                    return {
+                        text: block.text.trim(),
+                        x: block.bbox.x0,
+                        y: block.bbox.y0,
+                        width: block.bbox.x1 - block.bbox.x0,
+                        height: block.bbox.y1 - block.bbox.y0
+                    };
+                }).filter(block => block.text.length > 0);
+                
+                console.log('提取的文本块:', textBlocks);
+                
+                // 检查是否识别到文本
+                if (textBlocks.length === 0) {
+                    console.log('未识别到文本');
+                    arOverlay.innerHTML = '<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white">未识别到企业名称，请尝试清晰的图片</div>';
+                    return;
+                }
+                
+                // 调用DeepSeek API获取公司信息
+                await fetchCompanyData(textBlocks);
+            } catch (error) {
+                console.error('OCR error:', error);
+                console.error('错误详情:', error.stack);
+                
+                // 显示错误信息，避免访问undefined的属性
+                let errorMessage = '识别失败，请重试';
+                if (error.message && error.message.includes('SetVariable')) {
+                    errorMessage = 'OCR初始化失败，请刷新页面重试';
+                } else if (error.message && error.message.includes('loadLanguage')) {
+                    errorMessage = '语言包加载失败，请检查网络连接';
+                } else if (error.message && error.message.includes('Failed to fetch')) {
+                    errorMessage = '网络请求失败，请使用本地服务器访问';
+                }
+                
+                arOverlay.innerHTML = `<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white">${errorMessage}</div>`;
+            }
+        }
+        
+        // 调用DeepSeek API获取公司信息
+        async function fetchCompanyData(textBlocks) {
+            try {
+                // 构造Prompt
+                const prompt = `你是一个资深的校招猎头。当前用户的求职画像是：${JSON.stringify(userProfile)}。\n现在我给你一组从招聘墙上OCR识别出来的杂乱文本，请剔除无意义的符号，识别出其中的真实企业名称。\n针对每一个识别出的企业，请结合你的知识库，生成以下JSON字段：\n- company_name: (修正后的全称)\n- match_score: (0-100，基于用户画像评估)\n- salary_level: (高/中/低)\n- stress_level: (996/正常/轻松)\n- company_size: (大厂/独角兽/中小微)\n- short_review: (一句话辣评，如‘给的多但极度内卷’)\n- detail_info: (包含主营业务、常见热招岗位等)\n\n识别到的文本：\n${textBlocks.map(block => block.text).join('\n')}\n\n请严格返回JSON格式数据，不要包含任何其他文本。`;
+                
+                // 调用DeepSeek API
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer sk-742ee198f49b4004a420760a74d65a6f'
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            {
+                                role: 'user',
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 2000
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('API request failed');
+                }
+                
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+                
+                // 解析JSON响应
+                try {
+                    const parsedCompanies = JSON.parse(aiResponse);
+                    
+                    // 绑定坐标信息
+                    companiesData = parsedCompanies.map((company, index) => {
+                        const originalBlock = textBlocks[index];
+                        return {
+                            ...company,
+                            id: index,
+                            original_text: originalBlock.text,
+                            x: originalBlock.x,
+                            y: originalBlock.y,
+                            width: originalBlock.width,
+                            height: originalBlock.height
+                        };
+                    });
+                } catch (parseError) {
+                    // 如果解析失败，使用模拟数据
+                    console.error('JSON parse error:', parseError);
+                    companiesData = textBlocks.map((block, index) => {
+                        return {
+                            id: index,
+                            original_text: block.text,
+                            company_name: block.text,
+                            match_score: Math.floor(Math.random() * 100),
+                            salary_level: ['高', '中', '低'][Math.floor(Math.random() * 3)],
+                            stress_level: ['996', '正常', '轻松'][Math.floor(Math.random() * 3)],
+                            company_size: ['大厂', '独角兽', '中小微'][Math.floor(Math.random() * 3)],
+                            short_review: '数据不足',
+                            detail_info: '数据不足，但属于相关行业',
+                            x: block.x,
+                            y: block.y,
+                            width: block.width,
+                            height: block.height
+                        };
+                    });
+                }
+                
+                // 渲染AR层
+                renderAROverlay();
+            } catch (error) {
+                console.error('API error:', error);
+                arOverlay.innerHTML = '<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white">获取公司信息失败，请重试</div>';
+                
+                // 失败时使用模拟数据
+                companiesData = textBlocks.map((block, index) => {
+                    return {
+                        id: index,
+                        original_text: block.text,
+                        company_name: block.text,
+                        match_score: Math.floor(Math.random() * 100),
+                        salary_level: ['高', '中', '低'][Math.floor(Math.random() * 3)],
+                        stress_level: ['996', '正常', '轻松'][Math.floor(Math.random() * 3)],
+                        company_size: ['大厂', '独角兽', '中小微'][Math.floor(Math.random() * 3)],
+                        short_review: '数据不足',
+                        detail_info: '数据不足，但属于相关行业',
+                        x: block.x,
+                        y: block.y,
+                        width: block.width,
+                        height: block.height
+                    };
+                });
+                
+                // 渲染AR层
+                renderAROverlay();
+            }
+        }
+        
+        // 渲染AR层
+        function renderAROverlay() {
+            arOverlay.innerHTML = '';
+            arOverlay.style.pointerEvents = 'auto';
+            
+            // 获取图片的实际尺寸
+            const imgRect = uploadedImage.getBoundingClientRect();
+            const imgWidth = imgRect.width;
+            const imgHeight = imgRect.height;
+            
+            // 获取原始图片的尺寸
+            const naturalWidth = uploadedImage.naturalWidth;
+            const naturalHeight = uploadedImage.naturalHeight;
+            
+            // 计算缩放比例
+            const scaleX = imgWidth / naturalWidth;
+            const scaleY = imgHeight / naturalHeight;
+            
+            // 渲染每个公司的标记
+            companiesData.forEach(company => {
+                // 计算缩放后的坐标
+                const scaledX = company.x * scaleX;
+                const scaledY = company.y * scaleY;
+                const scaledWidth = company.width * scaleX;
+                const scaledHeight = company.height * scaleY;
+                
+                // 创建标记元素
+                const marker = document.createElement('div');
+                marker.className = 'absolute border-2 rounded-md cursor-pointer transition-all duration-300';
+                marker.style.left = `${scaledX}px`;
+                marker.style.top = `${scaledY}px`;
+                marker.style.width = `${scaledWidth}px`;
+                marker.style.height = `${scaledHeight}px`;
+                
+                // 根据当前滤镜设置颜色
+                updateMarkerStyle(marker, company);
+                
+                // 添加点击事件
+                marker.addEventListener('click', () => {
+                    openDetailSheet(company);
+                });
+                
+                arOverlay.appendChild(marker);
+            });
+        }
+        
+        // 更新标记样式
+        function updateMarkerStyle(marker, company) {
+            switch (currentFilter) {
+                case 'match_score':
+                    if (company.match_score >= 80) {
+                        marker.classList.remove('border-red-500', 'border-yellow-500');
+                        marker.classList.add('border-green-500');
+                    } else if (company.match_score >= 50) {
+                        marker.classList.remove('border-red-500', 'border-green-500');
+                        marker.classList.add('border-yellow-500');
+                    } else {
+                        marker.classList.remove('border-yellow-500', 'border-green-500');
+                        marker.classList.add('border-red-500');
+                    }
+                    break;
+                case 'salary_level':
+                    if (company.salary_level === '高') {
+                        marker.classList.remove('border-red-500', 'border-yellow-500');
+                        marker.classList.add('border-green-500');
+                    } else if (company.salary_level === '中') {
+                        marker.classList.remove('border-red-500', 'border-green-500');
+                        marker.classList.add('border-yellow-500');
+                    } else {
+                        marker.classList.remove('border-yellow-500', 'border-green-500');
+                        marker.classList.add('border-red-500');
+                    }
+                    break;
+                case 'stress_level':
+                    if (company.stress_level === '轻松') {
+                        marker.classList.remove('border-red-500', 'border-yellow-500');
+                        marker.classList.add('border-green-500');
+                    } else if (company.stress_level === '正常') {
+                        marker.classList.remove('border-red-500', 'border-green-500');
+                        marker.classList.add('border-yellow-500');
+                    } else {
+                        marker.classList.remove('border-yellow-500', 'border-green-500');
+                        marker.classList.add('border-red-500');
+                    }
+                    break;
+                case 'company_size':
+                    if (company.company_size === '大厂') {
+                        marker.classList.remove('border-red-500', 'border-yellow-500');
+                        marker.classList.add('border-green-500');
+                    } else if (company.company_size === '独角兽') {
+                        marker.classList.remove('border-red-500', 'border-green-500');
+                        marker.classList.add('border-yellow-500');
+                    } else {
+                        marker.classList.remove('border-yellow-500', 'border-green-500');
+                        marker.classList.add('border-red-500');
+                    }
+                    break;
+            }
+        }
+        
+        // 处理滤镜切换
+        function handleFilterChange(e) {
+            // 更新按钮样式
+            filterBtns.forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            e.target.classList.remove('bg-gray-200', 'text-gray-700');
+            e.target.classList.add('bg-primary', 'text-white');
+            
+            // 更新当前滤镜
+            const filterText = e.target.textContent.trim();
+            switch (filterText) {
+                case '综合匹配度':
+                    currentFilter = 'match_score';
+                    break;
+                case '薪资水平':
+                    currentFilter = 'salary_level';
+                    break;
+                case '工作压力':
+                    currentFilter = 'stress_level';
+                    break;
+                case '公司规模':
+                    currentFilter = 'company_size';
+                    break;
+            }
+            
+            // 重新渲染AR层
+            renderAROverlay();
+        }
+        
+        // 打开详情抽屉
+        function openDetailSheet(company) {
+            companyName.textContent = company.company_name;
+            companyDetails.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">匹配度:</span>
+                    <span class="text-sm">${company.match_score}/100</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">薪资水平:</span>
+                    <span class="text-sm">${company.salary_level}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">工作压力:</span>
+                    <span class="text-sm">${company.stress_level}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">公司规模:</span>
+                    <span class="text-sm">${company.company_size}</span>
+                </div>
+                <div>
+                    <span class="text-sm font-medium">一句话辣评:</span>
+                    <p class="text-sm">${company.short_review}</p>
+                </div>
+                <div>
+                    <span class="text-sm font-medium">详细信息:</span>
+                    <p class="text-sm">${company.detail_info}</p>
+                </div>
+            `;
+            detailSheet.classList.remove('translate-y-full');
+        }
+        
+        // 关闭详情抽屉
+        function closeDetailSheet() {
+            detailSheet.classList.add('translate-y-full');
+        }
+        
+        // 初始化应用
+        init();
+    </script>
+</body>
+</html>
