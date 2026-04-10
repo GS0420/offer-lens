@@ -338,33 +338,26 @@
                 
                 console.log('开始OCR处理:', file);
                 
-                // 使用Tesseract.js进行OCR，使用中文+英文混合语言包提高识别精度
-                const { createWorker } = Tesseract;
-                console.log('创建Tesseract worker...');
+                // 获取百度OCR的access token
+                console.log('获取百度OCR access token...');
+                const accessToken = await getBaiduOCRToken();
+                console.log('获取access token成功');
                 
-                // 简化worker创建，避免使用可能导致问题的参数
-                const worker = await createWorker();
+                // 调用百度OCR API
+                console.log('调用百度OCR API...');
+                const ocrResult = await callBaiduOCRAPI(file, accessToken);
+                console.log('OCR结果:', ocrResult);
                 
-                console.log('Tesseract worker创建成功');
-                
-                // 设置语言为中文+英文
-                await worker.loadLanguage('chi_sim+eng');
-                await worker.initialize('chi_sim+eng');
-                
-                console.log('开始识别图片...');
-                const { data: { blocks } } = await worker.recognize(file);
-                console.log('识别完成，结果:', blocks);
-                
-                await worker.terminate();
-                
-                // 提取文本和坐标
-                const textBlocks = blocks.map(block => {
+                // 处理OCR结果
+                const textBlocks = ocrResult.words_result.map((item, index) => {
+                    // 提取坐标信息
+                    const location = item.location;
                     return {
-                        text: block.text.trim(),
-                        x: block.bbox.x0,
-                        y: block.bbox.y0,
-                        width: block.bbox.x1 - block.bbox.x0,
-                        height: block.bbox.y1 - block.bbox.y0
+                        text: item.words.trim(),
+                        x: location.left,
+                        y: location.top,
+                        width: location.width,
+                        height: location.height
                     };
                 }).filter(block => block.text.length > 0);
                 
@@ -383,18 +376,59 @@
                 console.error('OCR error:', error);
                 console.error('错误详情:', error.stack);
                 
-                // 显示错误信息，避免访问undefined的属性
-                let errorMessage = '识别失败，请重试';
-                if (error.message && error.message.includes('SetVariable')) {
-                    errorMessage = 'OCR初始化失败，请刷新页面重试';
-                } else if (error.message && error.message.includes('loadLanguage')) {
-                    errorMessage = '语言包加载失败，请检查网络连接';
-                } else if (error.message && error.message.includes('Failed to fetch')) {
-                    errorMessage = '网络请求失败，请使用本地服务器访问';
-                }
-                
-                arOverlay.innerHTML = `<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white">${errorMessage}</div>`;
+                // 显示错误信息
+                arOverlay.innerHTML = '<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white">识别失败，请重试</div>';
             }
+        }
+        
+        // 获取百度OCR的access token
+        async function getBaiduOCRToken() {
+            const apiKey = 'SLpoDyg4attrXs4Tl7MBlAHA';
+            const secretKey = '2FWYBRzX3nrKb1Izw4GUCNE4RUCOV8Nw';
+            const url = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${apiKey}&client_secret=${secretKey}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+            
+            const data = await response.json();
+            return data.access_token;
+        }
+        
+        // 调用百度OCR API
+        async function callBaiduOCRAPI(file, accessToken) {
+            const url = `https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic?access_token=${accessToken}`;
+            
+            // 将文件转换为base64
+            const base64 = await fileToBase64(file);
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `image=${encodeURIComponent(base64)}&language_type=CHN_ENG`
+            });
+            
+            const data = await response.json();
+            return data;
+        }
+        
+        // 将文件转换为base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    // 移除data:image/jpeg;base64,前缀
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = error => reject(error);
+            });
         }
         
         // 调用DeepSeek API获取公司信息
