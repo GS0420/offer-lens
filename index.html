@@ -387,8 +387,8 @@
             const secretKey = '2FWYBRzX3nrKb1Izw4GUCNE4RUCOV8Nw';
             const url = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${apiKey}&client_secret=${secretKey}`;
             
-            // 使用公共CORS代理解决跨域问题
-            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+            // 使用更可靠的CORS代理
+            const proxyUrl = 'https://cors-anywhere.herokuapp.com/' + url;
             
             const response = await fetch(proxyUrl, {
                 method: 'POST',
@@ -408,8 +408,8 @@
             // 将文件转换为base64
             const base64 = await fileToBase64(file);
             
-            // 使用公共CORS代理解决跨域问题
-            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+            // 使用更可靠的CORS代理
+            const proxyUrl = 'https://cors-anywhere.herokuapp.com/' + url;
             
             const response = await fetch(proxyUrl, {
                 method: 'POST',
